@@ -151,14 +151,26 @@ for (i in 1 : length(res)){
 
 cat("\n")
 
-data = read.table("all5tables.txt")
+data_full = read.table("all5tables.txt")
 
-data = data[,36:38]
+data = data_full[,36:38]
 
 fdist = data %>% group_by(V37) %>% 
   summarise(counts = n(), m = mean(V38),
             std = sqrt(var(V38)), q005 = quantile(V38, c(0.05)))
 
+ps = c(); counts = c()
+for(i in 1:(dim(data_full)[1])){
+  if(i %% 100 == 0) { cat(i); cat(" ") }
+  tag = data_full$V37[i]; s = data_full$V38[i]
+  test_stat = data_full$V38[data_full$V37==tag]
+  counts = c(counts, length(test_stat))
+  ps = c(ps, mean(test_stat >= s))
+}
+cat("\n")
+
+data_full$pvalue = ps
+data_full$count = counts
 
 randc = sample(dim(fdist)[1], 1)
 data %>% filter(V37 == fdist$V37[randc]) %>% 
