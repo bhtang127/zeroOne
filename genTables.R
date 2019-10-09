@@ -96,3 +96,71 @@ zeroOne = function(A, nosim = 1000){
   c(halfP, pvalue)
 }
 
+
+res = c(); d = 5
+for (i in 0 : (2^(d^2)-1)){
+  if(i %% 100000 == 0) {cat(i," "); cat(length(res)," ")} 
+  bsl = as.numeric(sapply(strsplit(paste(rev(intToBits(i))),""),`[[`,2))
+  tbl = matrix(bsl[(32-d^2+1):32],d,d)
+  tbl = tbl[order(rowSums(tbl), decreasing = TRUE), 
+            order(colSums(tbl), decreasing = TRUE)]
+  id = paste(as.vector(tbl),collapse = "")
+  if(! id %in% res){
+    res = c(res, id)
+    # print(tbl)
+  }
+}
+cat("\n")
+i0 = i
+save(res, file = "all5table.RData")
+
+
+bit2int = function(bits){
+  N = length(bits); I = 0
+  for(i in N:1){
+    I = I + bits[i] * 2^(N-i)
+  }
+  I
+}
+
+file = "all5tables.txt"
+
+for (i in 1 : length(res)){
+  if(i %% 1000 == 0) cat(i," ")
+  
+  tbl = matrix(as.numeric(strsplit(res[i],"")[[1]]),5,5)
+  
+  rsum = rowSums(tbl)
+  csum = colSums(tbl)
+  
+  stat = testStat(tbl)
+  
+  dataLine = paste(
+    c(
+      as.character(as.vector(tbl)),
+      as.character(rsum),
+      as.character(csum),
+      paste0("T",bit2int(as.vector(tbl))),
+      paste0("R",paste(rsum,collapse = ""),"C",paste(csum,collapse = "")),
+      as.character(round(stat, 5))
+    ),
+    collapse = " ")
+  
+  write(dataLine, file = file, append = TRUE)
+}
+
+cat("\n")
+
+data = read.table("all5tables.txt")
+
+data = data[,36:38]
+
+fdist = data %>% group_by(V37) %>% 
+  summarise(counts = n(), m = mean(V38),
+            std = sqrt(var(V38)), q005 = quantile(V38, c(0.05)))
+
+
+randc = sample(dim(fdist)[1], 1)
+data %>% filter(V37 == fdist$V37[randc]) %>% 
+  ggplot(aes(x=V38)) + geom_density() + 
+  ggtitle(paste(fdist$V37[randc], "  counts: ", fdist$counts[randc]))
